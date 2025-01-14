@@ -446,6 +446,10 @@ class Channel(Base, AbstractChannel):
             self.__close_event.set()
             last_exception = e
             return
+        except ChannelClosed as e:
+            self.__close_event.set()
+            last_exception = e
+            return
         except Exception as e:
             last_exception = e
             raise
