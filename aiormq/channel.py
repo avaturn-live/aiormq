@@ -448,7 +448,6 @@ class Channel(Base, AbstractChannel):
             return
         except ChannelClosed as e:
             self.__close_event.set()
-            last_exception = e
             return
         except Exception as e:
             last_exception = e
@@ -463,17 +462,14 @@ class Channel(Base, AbstractChannel):
         if not self.connection.is_opened or self.__close_event.is_set():
             return
 
-        try:
-            await self.rpc(
-                spec.Channel.Close(
-                    reply_code=self.__close_reply_code,
-                    class_id=self.__close_class_id,
-                    method_id=self.__close_method_id,
-                ),
-                timeout=self.connection.connection_tune.heartbeat or None,
-            )
-        except ChannelClosed:
-            pass
+        await self.rpc(
+            spec.Channel.Close(
+                reply_code=self.__close_reply_code,
+                class_id=self.__close_class_id,
+                method_id=self.__close_method_id,
+            ),
+            timeout=self.connection.connection_tune.heartbeat or None,
+        )
 
         await self.__close_event.wait()
 
