@@ -502,7 +502,9 @@ class Channel(Base, AbstractChannel):
     async def basic_cancel(
         self, consumer_tag: str, *, nowait: bool = False,
         timeout: TimeoutType = None,
-    ) -> spec.Basic.CancelOk:
+    ) -> spec.Basic.CancelOk | None:
+        if self.is_closed or self.__close_event.set():
+            return None
         return await self.rpc(
             spec.Basic.Cancel(consumer_tag=consumer_tag, nowait=nowait),
             timeout=timeout,

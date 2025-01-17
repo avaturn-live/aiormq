@@ -320,7 +320,7 @@ class AbstractChannel(AbstractBase):
     async def basic_cancel(
         self, consumer_tag: str, *, nowait: bool = False,
         timeout: TimeoutType = None,
-    ) -> spec.Basic.CancelOk:
+    ) -> spec.Basic.CancelOk | None:
         raise NotImplementedError
 
     @abstractmethod
