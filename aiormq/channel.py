@@ -463,14 +463,17 @@ class Channel(Base, AbstractChannel):
         if not self.connection.is_opened or self.__close_event.is_set():
             return
 
-        await self.rpc(
-            spec.Channel.Close(
-                reply_code=self.__close_reply_code,
-                class_id=self.__close_class_id,
-                method_id=self.__close_method_id,
-            ),
-            timeout=self.connection.connection_tune.heartbeat or None,
-        )
+        try:
+            await self.rpc(
+                spec.Channel.Close(
+                    reply_code=self.__close_reply_code,
+                    class_id=self.__close_class_id,
+                    method_id=self.__close_method_id,
+                ),
+                timeout=self.connection.connection_tune.heartbeat or None,
+            )
+        except asyncio.CancelledError:
+            pass
 
         await self.__close_event.wait()
 
