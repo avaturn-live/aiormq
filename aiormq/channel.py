@@ -448,7 +448,7 @@ class Channel(Base, AbstractChannel):
             return
         except ChannelClosed as e:
             self.__close_event.set()
-            last_exception = asyncio.CancelledError("Received ChannelClosed frame.")
+            last_exception = e
             return
         except Exception as e:
             last_exception = e
