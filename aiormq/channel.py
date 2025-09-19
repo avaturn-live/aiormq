@@ -412,7 +412,6 @@ class Channel(Base, AbstractChannel):
     async def _on_close_ok_frame(self, _: spec.Channel.CloseOk) -> None:
         self.connection.channels.pop(self.number, None)
         self.__close_event.set()
-        raise ChannelClosed(None, None)
 
     async def _reader(self) -> None:
         hooks: Mapping[Any, Tuple[bool, Callable[[Any], Awaitable[None]]]]
@@ -433,7 +432,7 @@ class Channel(Base, AbstractChannel):
         last_exception: Optional[BaseException] = None
 
         try:
-            while True:
+            while not self.__close_event.is_set():
                 frame = await self._get_frame()
                 should_add_to_rpc, hook = hooks.get(type(frame), (True, None))
 
@@ -443,10 +442,6 @@ class Channel(Base, AbstractChannel):
                 if should_add_to_rpc:
                     await self.rpc_frames.put(frame)
         except asyncio.CancelledError as e:
-            self.__close_event.set()
-            last_exception = e
-            return
-        except ChannelClosed as e:
             self.__close_event.set()
             last_exception = e
             return
@@ -463,17 +458,15 @@ class Channel(Base, AbstractChannel):
         if not self.connection.is_opened or self.__close_event.is_set():
             return
 
-        try:
-            await self.rpc(
-                spec.Channel.Close(
-                    reply_code=self.__close_reply_code,
-                    class_id=self.__close_class_id,
-                    method_id=self.__close_method_id,
-                ),
-                timeout=self.connection.connection_tune.heartbeat or None,
-            )
-        except asyncio.CancelledError:
-            pass
+        await self.rpc(
+            spec.Channel.Close(
+                reply_code=self.__close_reply_code,
+                class_id=self.__close_class_id,
+                method_id=self.__close_method_id,
+            ),
+            timeout=self.connection.connection_tune.heartbeat or None,
+        )
+
 
         await self.__close_event.wait()
 
