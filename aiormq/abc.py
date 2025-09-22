@@ -28,14 +28,16 @@ ExceptionType = Union[BaseException, Type[BaseException]]
 class TaskWrapper:
     __slots__ = "_exception", "task"
 
-    _exception: Union[BaseException, Type[BaseException]]
+    _exception: BaseException | None
     task: asyncio.Task
 
     def __init__(self, task: asyncio.Task):
         self.task = task
-        self._exception = asyncio.CancelledError
+        self._exception = None
 
     def throw(self, exception: ExceptionType) -> None:
+        if isinstance(exception, type):
+            exception = exception()
         self._exception = exception
         self.task.cancel()
 
@@ -43,7 +45,9 @@ class TaskWrapper:
         try:
             return await self.task
         except asyncio.CancelledError as e:
-            raise self._exception from e
+            if self._exception is not None:
+                raise self._exception from e
+            raise
 
     def __await__(self, *args: Any, **kwargs: Any) -> Any:
         return self.__inner().__await__()
