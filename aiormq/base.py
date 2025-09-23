@@ -61,10 +61,7 @@ class FutureStore(AbstractFutureStore):
                     future.throw(exception)
                 tasks.append(future)
             elif isinstance(future, asyncio.Future):
-                if exception is None:
-                    future.cancel()
-                else:
-                    future.set_exception(exception)
+                future.set_exception(exception or asyncio.CancelledError)
 
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
