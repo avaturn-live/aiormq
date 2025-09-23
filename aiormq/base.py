@@ -55,10 +55,16 @@ class FutureStore(AbstractFutureStore):
                 continue
 
             if isinstance(future, TaskWrapper):
-                future.throw(exception or Exception)
+                if exception is None:
+                    future.cancel()
+                else:
+                    future.throw(exception)
                 tasks.append(future)
             elif isinstance(future, asyncio.Future):
-                future.set_exception(exception or Exception)
+                if exception is None:
+                    future.cancel()
+                else:
+                    future.set_exception(exception)
 
         if tasks:
             await asyncio.gather(*tasks, return_exceptions=True)
@@ -124,10 +130,10 @@ class Base(AbstractBase):
         if self.is_closed:  # pragma: no cover
             return
 
-        with suppress(Exception):
+        with suppress(Exception, asyncio.CancelledError):
             await self._on_close(exc)
 
-        with suppress(Exception):
+        with suppress(Exception, asyncio.CancelledError):
             await self._cancel_tasks(exc)
 
     async def close(
